@@ -1,0 +1,10 @@
+[project]
+name = "csr-regfile-with-axi-lite"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "cocotb>=2.0.1",
+    "pytest>=9.0.2",
+]

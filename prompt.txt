@@ -1,0 +1,9 @@
+“
+Complete the two partial SystemVerilog RTL files:
+
+- sources/axi_top.sv : an AXI4-Lite slave peripheral that exposes a small memory-mapped register space.
+- sources/csr_regfile.sv : an internal register file implementing data registers + CSR registers with per-register access permissions.
+
+Read the specifications placed in /workdir/docs/Specification.md to construct and properly integrate the modules.
+The design must be synthesizable, parameterized, and robust to AXI-Lite backpressure.
+”
