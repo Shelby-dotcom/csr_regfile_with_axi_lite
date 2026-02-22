@@ -71,7 +71,12 @@ Outputs:
   - Give a proper write response and keep it stable until handshake.
 
 Byte enables:
--  A combinational block handles byte-level write enables using the strobe signal (`wstrb`), merging new write data with existing data from the register file. This merged data is then committed during a write transaction.
+- `wstrb` is **byte enables** (one bit per byte lane).
+- For **partial writes** (`wstrb` not all 1s), the slave must implement **read-modify-write** semantics:
+  - start with the current addressed register value (the existing contents)
+  - for each lane where `wstrb[i] == 1`, replace that byte with `wdata[(i*8)+:8]`
+  - for each lane where `wstrb[i] == 0`, **preserve** the existing byte (do not zero it)
+- For **full writes** (`wstrb == {STRB_W{1'b1}}`), write `wdata` directly.
 
 Error response on write:
 - If address out of range OR write not permitted, respond SLVERR on B channel (and must not modify the register contents).
@@ -86,19 +91,27 @@ Error response on write:
 -   The read data is fetched from the register file using the provided address. The valid read data and its response are asserted until the master signals readiness via `rready`. After a successful handshake, the module returns to the idle state. A small read state machine should be implemented (`IDLE`/`READ`) to correctly capture this behaviour.
 
 Read latency:
-- `rvalid` must assert **exactly 1 cycle** after the AR handshake.
-- For an error read (out of range or read not permitted), `rvalid` must also assert **exactly 1 cycle** after AR handshake, with `SLVERR` response and read data to be 0.
+- `rvalid` must not assert in the same cycle as the AR handshake.
+- `rvalid` typically asserts after the read data is available (after about 2 cycles).
+- For an error read (out of range or read not permitted), `rdata` must be 0 and `rresp` must be `SLVERR` when `rvalid` asserts.
 
 
 ### Timeout behavior
 - **Write timeout**:
-  - Start a write timer when either AW handshake or W handshake occurs.
-  - If the other phase does not handshake within `TXN_TIMEOUT` cycles, the slave must return a write response with `SLVERR`.
-  - Partial captured write (address or data) must be discarded.
+  - Start a write timer when a write transaction begins (i.e., when write activity is observed and a write is in-progress).
+  - If a write transaction does not reach a **successful B-channel handshake** within `TXN_TIMEOUT` cycles, the slave must:
+    - assert `bvalid`
+    - drive `bresp = SLVERR`
+    - hold `bvalid/bresp` stable until `bready` is asserted
+  - Any timed-out write must not modify register contents (discard any partially captured address/data).
 
 - **Read timeout**:
-  - Start a read timer on AR handshake.
-  - If the read response is not accepted time out cycles, the slave must drop the response and recover to idle.
+  - Start a read timer when a read transaction begins (AR handshake / read in-progress).
+  - If a read transaction does not reach a **successful R-channel handshake** within `TXN_TIMEOUT` cycles, the slave must:
+    - assert `rvalid`
+    - drive `rresp = SLVERR` and `rdata = 0`
+    - hold `rvalid/rresp/rdata` stable until `rready` is asserted
+  - After the handshake, recover to idle and accept new transactions.
 
 ---
 
@@ -148,10 +161,9 @@ Required behavior:
 - On register write :
   - If address is in range and writable per permissions: update that register with data.
   - Do not modify storage if no write enable.
-  - assert `wr_err` or `addr_err` for at least 1 cycle.
 - On register read:
   - If address is in range and readable per permissions read data with the addressed register value on the next cycle.
-  - If no read enable, the data should be 0 on the next cycle and assert any read errors if not accessed in range.
+  - If no read enable, hold `reg_rdata` stable (do not generate spurious access violations).
 
 ## Register Map
 The AXI address (`awaddr`/`araddr`) represents a **register index** (word addressing), not a byte address.
