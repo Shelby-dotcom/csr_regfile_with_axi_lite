@@ -567,7 +567,7 @@ def test_simple_dff_hidden_runner():
 
    proj_path = Path(__file__).resolve().parent.parent
 
-   sources = [proj_path / "golden/axi_top.sv" , proj_path / "golden/csr_regfile.sv"]
+   sources = [proj_path / "sources/axi_top.sv" , proj_path / "sources/csr_regfile.sv"]
 
    runner = get_runner(sim)
    runner.build(
