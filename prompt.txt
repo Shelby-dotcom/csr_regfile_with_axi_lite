@@ -6,4 +6,24 @@ Complete the two partial SystemVerilog RTL files:
 
 Read the specifications placed in /workdir/docs/Specification.md to construct and properly integrate the modules.
 The design must be synthesizable, parameterized, and robust to AXI-Lite backpressure.
+
+Hints:
+
+- csr_regfile.sv read behavior:
+  - Do not force reg_rdata <= 0 when reg_read is deasserted. Hold reg_rdata stable unless a valid readable access occurs.
+  - For an illegal read (WO or out-of-range), drive access_violation = 2'b10 (read violation) or 2'b11 (addr out of range). Returning 0 on reg_rdata is fine, but it must not break the “hold stable when idle” behavior.
+  - Make sure you implement data registers and CSR registers read writes properly.
+
+- csr_regfile.sv permissions:
+  - Writing to RO (or reserved/no-access) must set access_violation = 2'b01 and must not modify storage.
+  - Reading from WO (or reserved/no-access) must set access_violation = 2'b10.
+  - CSR access map ordering matters. Compare your bit indexing against Specification.md.
+
+- axi_top.sv byte strobes:
+  - Partial writes must preserve non-strobed bytes (read-modify-write). A common bug is building merged data from 0, use the existing register value as the base.
+
+- axi_top.sv timeout semantics:
+  - Write timeout: if the master stalls i.e bready=0, you must still assert bvalid with bresp=SLVERR after TXN_TIMEOUT, and hold it until bready goes high. Do not “drop” the response.
+  - Read timeout: if the master stalls rready=0, you must still assert rvalid with rresp=SLVERR (and rdata=0) after TXN_TIMEOUT, and hold it until rready goes high.
+  - Keep bresp/rresp stable while bvalid/rvalid are asserted.
 ”
