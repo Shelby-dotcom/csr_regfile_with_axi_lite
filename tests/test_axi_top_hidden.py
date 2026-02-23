@@ -127,7 +127,7 @@ def find_wo_index(dut, num_data_regs):
             return i
     return None
 
-@cocotb.test()
+@cocotb.test(timeout_time=500, timeout_unit="ns")
 async def test_data_registers_with_axi(dut):
     """
     Test the data register region via the AXI interface.
@@ -198,7 +198,7 @@ async def test_data_registers_with_axi(dut):
 
     dut._log.info("Data registers AXI test passed.")
 
-@cocotb.test()
+@cocotb.test(timeout_time=500, timeout_unit="ns")
 async def test_csr_registers_with_axi(dut):
     """
     Test the CSR region via the AXI interface.
@@ -294,7 +294,7 @@ async def test_csr_registers_with_axi(dut):
     
     dut._log.info("CSR registers AXI test passed.")
 
-@cocotb.test()
+@cocotb.test(timeout_time=500, timeout_unit="ns")
 async def test_out_of_range_addr_with_axi(dut):
     """
     Test that accessing an out-of-range address triggers an address violation.
@@ -347,7 +347,7 @@ async def test_out_of_range_addr_with_axi(dut):
     
     dut._log.info("Out-of-range address AXI test passed.")
 
-@cocotb.test()
+@cocotb.test(timeout_time=500, timeout_unit="ns")
 async def test_edge_cases_with_axi(dut):
     """
     Test edge cases via the AXI interface by writing extreme values (all zeros and all ones)
@@ -425,7 +425,7 @@ async def test_edge_cases_with_axi(dut):
     
     dut._log.info("Edge cases AXI test passed.")
 
-@cocotb.test()
+@cocotb.test(timeout_time=500, timeout_unit="ns")
 async def test_read_violation_with_axi(dut):
     """
     Test that a read from a write-only data register via the AXI interface triggers a read violation.
@@ -463,7 +463,7 @@ async def test_read_violation_with_axi(dut):
     
     dut._log.info("Read violation AXI test passed.")
 
-@cocotb.test()
+@cocotb.test(timeout_time=500, timeout_unit="ns")
 async def test_write_violation_with_axi(dut):
     """
     Test that a write to a read-only data register via the AXI interface triggers a write violation.
@@ -506,7 +506,7 @@ async def test_write_violation_with_axi(dut):
     
     dut._log.info("Write violation AXI test passed.")
 
-@cocotb.test()
+@cocotb.test(timeout_time=1000, timeout_unit="ns")
 async def test_write_timeout_mechanism(dut):
     # Start clock with 5 ns period
     cocotb.start_soon(Clock(dut.clk, 10, unit='ns').start())
@@ -535,7 +535,7 @@ async def test_write_timeout_mechanism(dut):
     dut._log.info("Successfully completed write channel timeout test")
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=1000, timeout_unit="ns")
 async def test_read_timeout_mechanism(dut):
     # Start clock with 5 ns period
     cocotb.start_soon(Clock(dut.clk, 10, unit='ns').start())
