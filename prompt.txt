@@ -41,10 +41,18 @@ Hints:
    - Complete the write once both have occurred (one outstanding transaction at a time).
    - A failed attempt incorrectly assumed AW and W must arrive together, which breaks when channels are decoupled.
 
-6) Timeout semantics depend on response acceptance.
-   - Write timeout test stalls bready=0. After TXN_TIMEOUT cycles you must assert bvalid=1 and bresp=2 and hold them until bready becomes 1.
-   - Read timeout test stalls rready=0. After TXN_TIMEOUT cycles you must assert rvalid=1, rresp=2, rdata=0 and hold them until rready becomes 1.
-   - Do not drop the response and do not keep OKAY during timeout.
+6) Timeout semantics depend on response acceptance (this is what the failing tests check).
+   - The timeout counter must measure "transaction not accepted", not just "missing address/data".
+   - Define write transaction complete only when the B handshake happens: bvalid && bready.
+   - Define read transaction complete only when the R handshake happens: rvalid && rready.
+   - Write timeout test case: awvalid=1, wvalid=1, but bready=0 for > TXN_TIMEOUT cycles.
+       * After TXN_TIMEOUT cycles, you MUST be driving bvalid=1 and bresp=2 (SLVERR).
+       * If you asserted bvalid earlier with bresp=0 (OKAY) while bready was 0, you must OVERRIDE/UPDATE bresp to 2 once timeout hits, and keep bvalid asserted until bready=1.
+       * Do not clear/reset the write timeout counter just because bvalid is 1; keep counting until bready accepts (or until you force the timeout response).
+   - Read timeout test case: arvalid=1, but rready=0 for > TXN_TIMEOUT cycles.
+       * After TXN_TIMEOUT cycles, you MUST be driving rvalid=1, rresp=2 (SLVERR), and rdata=0.
+       * If you asserted rvalid earlier with rresp=0 while rready was 0, you must OVERRIDE/UPDATE rresp to 2 once timeout hits, and keep rvalid asserted until rready=1.
+       * Do not drop the response to recover; hold SLVERR response stable until accepted.
 
 7) WSTRB byte enables must preserve non-strobed bytes.
    - Full write (all strobe bits 1): write wdata directly.
