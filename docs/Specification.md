@@ -1,6 +1,6 @@
 # CSR Register File with AXI4-Lite Slave
 
-A parameterized SystemVerilog AXI4-Lite slave that bridges AXI-Lite reads/writes into an internal `csr_regfile` module. The design supports byte-lane writes, enforces access permissions via the register file, and returns AXI responses. A simple timeout mechanism is included for both read and write transactions.
+A parameterized SystemVerilog AXI4-Lite slave that bridges AXI-Lite reads/writes into an internal `csr_regfile` module. The design supports byte-lane writes, enforces access permissions via the register file, and returns AXI responses.
 
 ---
 
@@ -22,7 +22,6 @@ A parameterized SystemVerilog AXI4-Lite slave that bridges AXI-Lite reads/writes
 | `DATA_W`          | 32                       | AXI data width.                              |
 | `ADDR_W`          | 8                        | Width of `awaddr/araddr` register index.     |
 | `STRB_W`          | `DATA_W/8`               | Strobe width (byte lanes).                   |
-| `TXN_TIMEOUT`     | 50                       | Timeout feature in clk cycles.               |
 | `NUM_DATA_REGS`   | 8                        | Number of data registers.                    |
 | `NUM_CSR_REGS`    | 4                        | Number of CSR registers.                     |
 | `DATA_REG_ACCESS` | 16'hA500                 | Packed 2-bit access field per data register. |
@@ -94,24 +93,6 @@ Read latency:
 - `rvalid` must not assert in the same cycle as the AR handshake.
 - `rvalid` typically asserts after the read data is available (after about 2 cycles).
 - For an error read (out of range or read not permitted), `rdata` must be 0 and `rresp` must be `SLVERR` when `rvalid` asserts.
-
-
-### Timeout behavior
-- **Write timeout**:
-  - Start a write timer when a write transaction begins (i.e., when write activity is observed and a write is in-progress).
-  - If a write transaction does not reach a **successful B-channel handshake** within `TXN_TIMEOUT` cycles, the slave must:
-    - assert `bvalid`
-    - drive `bresp = SLVERR`
-    - hold `bvalid/bresp` stable until `bready` is asserted
-  - Any timed-out write must not modify register contents (discard any partially captured address/data).
-
-- **Read timeout**:
-  - Start a read timer when a read transaction begins (AR handshake / read in-progress).
-  - If a read transaction does not reach a **successful R-channel handshake** within `TXN_TIMEOUT` cycles, the slave must:
-    - assert `rvalid`
-    - drive `rresp = SLVERR` and `rdata = 0`
-    - hold `rvalid/rresp/rdata` stable until `rready` is asserted
-  - After the handshake, recover to idle and accept new transactions.
 
 ---
 
