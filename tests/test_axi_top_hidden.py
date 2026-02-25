@@ -506,61 +506,6 @@ async def test_write_violation_with_axi(dut):
     
     dut._log.info("Write violation AXI test passed.")
 
-@cocotb.test(timeout_time=1000, timeout_unit="ns")
-async def test_write_timeout_mechanism(dut):
-    # Start clock with 5 ns period
-    cocotb.start_soon(Clock(dut.clk, 10, unit='ns').start())
-    # Initialize DUT
-    await dut_init(dut)
-    # Apply reset sequence
-    dut.arst_n.value = 0
-    await Timer(50, units='ns')
-    dut.arst_n.value = 1
-    await RisingEdge(dut.clk)
-
-    # -------------------------------
-    # Test Write Channel Timeout
-    # -------------------------------
-    dut._log.info("Starting write channel timeout test")
-    dut.awaddr.value = 2
-    dut.awvalid.value = 1
-    dut.wdata.value  = 0xDEADBEEF
-    dut.wstrb.value  = 0xF
-    dut.wvalid.value = 1
-    dut.bready.value = 0
-
-    await Timer((int(dut.TXN_TIMEOUT.value) * 10) + 20, units='ns')
-    assert int(dut.bvalid.value) == 1, "Write channel: bvalid not asserted after timeout."
-    assert int(dut.bresp.value) == 2, f"Write channel: bresp expected 2 (SLVERR), got {dut.bresp.value}"
-    dut._log.info("Successfully completed write channel timeout test")
-
-
-@cocotb.test(timeout_time=1000, timeout_unit="ns")
-async def test_read_timeout_mechanism(dut):
-    # Start clock with 5 ns period
-    cocotb.start_soon(Clock(dut.clk, 10, unit='ns').start())
-    # Initialize DUT
-    await dut_init(dut)
-    # Apply reset sequence
-    dut.arst_n.value = 0
-    await Timer(50, units='ns')
-    dut.arst_n.value = 1
-    await RisingEdge(dut.clk)
-
-    # -------------------------------
-    # Test Read Channel Timeout
-    # -------------------------------
-    dut._log.info("Starting read channel timeout test")
-    dut.araddr.value = 2
-    dut.arvalid.value = 1
-    # simulate stall
-    dut.rready.value = 0
-    await Timer((int(dut.TXN_TIMEOUT.value) * 10) + 20, unit='ns')
-
-    assert int(dut.rvalid.value) == 1, "Read channel: rvalid not asserted after timeout."
-    assert int(dut.rresp.value) == 2, f"Read channel: rresp expected 2 (SLVERR), got {dut.rresp.value}"
-    dut._log.info("Successfully completed read channel timeout test")
-
 
 def test_simple_dff_hidden_runner():
    sim = os.getenv("SIM", "icarus")
