@@ -4,7 +4,6 @@ module axi_top #(
     parameter DATA_W = 32,
     parameter STRB_W = 4,
     parameter ADDR_W = 4,
-    parameter TXN_TIMEOUT = 50, // Timeout in clk cycles
     parameter NUM_DATA_REGS = 8,
     parameter logic [NUM_DATA_REGS*2-1:0] DATA_REG_ACCESS = 16'hA500
 ) (
@@ -50,9 +49,6 @@ module axi_top #(
     logic [1:0] access_violation;
     logic       reg_wr_done;
     logic       reg_rd_done;
-    // Timeout counters
-    logic [$clog2(TXN_TIMEOUT+1)-1:0] write_timer;
-    logic [$clog2(TXN_TIMEOUT+1)-1:0] read_timer;
 
     //--------------------------------
     // Register File
@@ -78,26 +74,8 @@ module axi_top #(
         if (!arst_n) begin
             awready <= 1'b1;
             wready <= 1'b1;
-            write_timer  <= 0;
         end
         else begin
-            if (awvalid || wvalid) begin
-                if (write_timer < TXN_TIMEOUT)
-                    write_timer <= write_timer + 1;
-                else begin
-                    // Timeout reached: trigger error response
-                    bresp    <= 2'b10; // SLVERR
-                    bvalid   <= 1'b1;
-                    // Reset handshake signals to recover
-                    awready  <= 1'b1;
-                    wready   <= 1'b1;
-                    write_timer <= 0;
-                end
-            end
-            else begin
-                write_timer <= 0;
-            end
-
             if (awvalid && awready) begin
                 awready <= 1'b0;
             end
@@ -141,7 +119,6 @@ module axi_top #(
             reg_wstrb     <= 'd0;
             aw_done       <= 0;
             w_val         <= 0;
-            read_timer    <= 0;
             reg_wr_done   <= 1'b0;
             reg_rd_done   <= 1'b0;
         end 
@@ -189,23 +166,6 @@ module axi_top #(
                 bvalid <= 1'b0;
             end
 
-            // Timeout counter update for read transactions
-            if (arvalid || (rd_state == READ)) begin
-                if (read_timer < TXN_TIMEOUT)
-                    read_timer <= read_timer + 1;
-                else begin
-                    // Timeout reached: trigger error response for read channel
-                    rresp      <= 2'b10; // SLVERR
-                    rvalid     <= 1'b1;
-                    arready    <= 1'b1;
-                    rd_state   <= IDLE;
-                    read_timer <= 0;
-                end
-            end
-            else begin
-                read_timer <= 0;
-            end
-
             // Read Address/Data Handling
             case (rd_state)
                 IDLE: begin
@@ -225,7 +185,7 @@ module axi_top #(
                         rvalid <= 1'b1;
                     rdata <= reg_rdata;
 
-                    if ((access_violation == 2'b10 || access_violation == 2'b11) && (read_timer < TXN_TIMEOUT) )
+                    if (access_violation == 2'b10 || access_violation == 2'b11)
                         rresp <= 2'b10; // SLVERR
 
                     if (rvalid && rready) begin
